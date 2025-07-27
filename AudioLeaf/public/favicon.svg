@@ -1,0 +1,9 @@
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Simple, bold leaf design -->
+  <path d="M8 8C8 16 16 24 24 16C16 8 8 8 8 8Z" fill="#10b981"/>
+  <path d="M16 24V16" stroke="#059669" stroke-width="2" stroke-linecap="round"/>
+  <path d="M16 12C14 16 12 20 16 20" stroke="#059669" stroke-width="1" opacity="0.8"/>
+  <path d="M16 12C18 16 20 20 16 20" stroke="#059669" stroke-width="1" opacity="0.8"/>
+  <!-- Add a small "A" for AudioLeaf -->
+  <text x="16" y="18" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" font-weight="bold" fill="white">A</text>
+</svg> 

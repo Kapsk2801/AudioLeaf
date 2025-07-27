@@ -7,9 +7,11 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "start": "vite preview --port 3000"
   },
   "dependencies": {
+    "mammoth": "^1.9.1",
     "pdf-parse": "^1.1.1",
     "pdfjs-dist": "^3.11.174",
     "react": "^19.1.0",

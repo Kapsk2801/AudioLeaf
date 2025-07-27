@@ -3,8 +3,10 @@ import './App.css';
 import UniversalPDFProcessor from './components/UniversalPDFProcessor';
 import AudioControls from './components/AudioControls';
 import TextDisplay from './components/TextDisplay';
+import DocumentConverter from './components/DocumentConverter';
 
 function App() {
+  const [page, setPage] = useState('main');
   const [pdfText, setPdfText] = useState('');
   const [isReading, setIsReading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -18,6 +20,9 @@ function App() {
   const speechRef = useRef(null);
 
   useEffect(() => {
+    // Set document title
+    document.title = 'AudioLeaf - Transform PDFs to Speech';
+    
     // Initialize speech synthesis
     if ('speechSynthesis' in window) {
       speechRef.current = window.speechSynthesis;
@@ -146,14 +151,72 @@ function App() {
     setSpeechRate(rate);
   };
 
+  // Update title when page changes
+  useEffect(() => {
+    if (page === 'main') {
+      document.title = 'AudioLeaf - Transform PDFs to Speech';
+    } else if (page === 'convert') {
+      document.title = 'AudioLeaf - Document Converter';
+    }
+  }, [page]);
+
+  if (page === 'convert') {
+    return (
+      <div className="app">
+        <header className="app-header">
+          <div className="logo-container">
+            <div className="leaf-logo">
+              <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M24 4C12 16 8 32 24 44C40 32 36 16 24 4Z" fill="#10b981" stroke="#059669" strokeWidth="2"/>
+                <path d="M24 44V20" stroke="#059669" strokeWidth="2" strokeLinecap="round"/>
+              </svg>
+            </div>
+            <h1>AudioLeaf</h1>
+          </div>
+          <p className="tagline">Convert PDF to Word or Word to PDF</p>
+        </header>
+        <main className="app-main">
+          <DocumentConverter />
+          <button className="clear-text-btn" style={{marginTop: '2rem', display: 'block', margin: '2rem auto 0'}} onClick={() => setPage('main')}>← Back to Main</button>
+        </main>
+        <footer className="app-footer">
+          <p>© 2025 AudioLeaf. All rights reserved. | Made with <span style={{color: '#10b981', fontWeight: 'bold'}}>❤️</span> for accessible reading.</p>
+        </footer>
+      </div>
+    );
+  }
+
   return (
     <div className="app">
       <header className="app-header">
-        <h1>🎵 AudioLeaf</h1>
-        <p>Transform your PDFs into spoken words</p>
+        <div className="falling-leaves">
+          {[...Array(20)].map((_, i) => (
+            <div key={i} className={`leaf leaf-${i % 3}`} style={{
+              '--fall-duration': `${Math.random() * 4 + 3}s`,
+              '--fall-delay': `${Math.random() * 3}s`,
+              '--sway-duration': `${Math.random() * 3 + 2}s`,
+              '--sway-delay': `${Math.random() * 2}s`,
+              '--leaf-size': `${Math.random() * 25 + 12}px`,
+              '--leaf-left': `${Math.random() * 100}%`,
+              '--leaf-color': `hsl(${100 + Math.random() * 60}, 60%, ${50 + Math.random() * 30}%)`,
+              '--leaf-rotation': `${Math.random() * 360}deg`
+            }}></div>
+          ))}
+        </div>
+        <div className="logo-container">
+          <div className="leaf-logo">
+            <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M24 4C12 16 8 32 24 44C40 32 36 16 24 4Z" fill="#10b981" stroke="#059669" strokeWidth="2"/>
+              <path d="M24 44V20" stroke="#059669" strokeWidth="2" strokeLinecap="round"/>
+            </svg>
+          </div>
+          <h1>AudioLeaf</h1>
+        </div>
+        <p className="tagline">Transform your PDFs into spoken words with natural voices</p>
       </header>
 
       <main className="app-main">
+        <button className="clear-text-btn" style={{marginBottom: '2rem'}} onClick={() => setPage('convert')}>Convert PDF ↔ Word</button>
         <UniversalPDFProcessor onPDFProcessed={handlePDFProcessed} />
         
         {pdfText && (
@@ -184,7 +247,7 @@ function App() {
       </main>
 
       <footer className="app-footer">
-        <p>Built with React & Web Speech API</p>
+        <p>© 2025 AudioLeaf. All rights reserved. | Made with <span style={{color: '#10b981', fontWeight: 'bold'}}>❤️</span> for accessible reading.</p>
       </footer>
     </div>
   );

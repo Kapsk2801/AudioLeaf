@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import mammoth from 'mammoth';
 import { createWorker } from 'tesseract.js';
 
 const UniversalPDFProcessor = ({ onPDFProcessed }) => {
@@ -48,108 +49,154 @@ const UniversalPDFProcessor = ({ onPDFProcessed }) => {
     };
   }, []);
 
-  const processPDFWithAlternativeMethod = async (file) => {
+  const processDocument = async (file) => {
     try {
       setIsProcessing(true);
       setProgress(0);
-      setProcessingStep('Analyzing PDF structure...');
+      setProcessingStep('Analyzing document structure...');
       
-      console.log('Processing PDF with alternative method:', file.name, 'Size:', file.size);
+      console.log('Processing document:', file.name, 'Size:', file.size, 'Type:', file.type);
       
       // Validate file size (max 50MB)
       if (file.size > 50 * 1024 * 1024) {
-        throw new Error('File size too large. Please upload a PDF smaller than 50MB.');
+        throw new Error('File size too large. Please upload a document smaller than 50MB.');
       }
       
       const arrayBuffer = await file.arrayBuffer();
-      
-      // Validate PDF format
       const uint8Array = new Uint8Array(arrayBuffer);
-      const pdfHeader = String.fromCharCode(...uint8Array.slice(0, 4));
-      if (pdfHeader !== '%PDF') {
-        throw new Error('Invalid PDF file format.');
+      
+      // Check file type and process accordingly
+      const fileName = file.name.toLowerCase();
+      const isPDF = file.type === 'application/pdf' || fileName.endsWith('.pdf');
+      const isWord = file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || 
+                     file.type === 'application/msword' ||
+                     fileName.endsWith('.docx') || fileName.endsWith('.doc');
+      
+      if (isPDF) {
+        // Validate PDF format
+        const pdfHeader = String.fromCharCode(...uint8Array.slice(0, 4));
+        if (pdfHeader !== '%PDF') {
+          throw new Error('Invalid PDF file format.');
+        }
+        setProcessingStep('Analyzing PDF structure...');
+      } else if (isWord) {
+        setProcessingStep('Analyzing Word document...');
+      } else {
+        throw new Error('Unsupported file format. Please upload a PDF or Word document.');
       }
       
-      setProcessingStep('Converting PDF to images...');
-      setProgress(25);
+      let extractedText = '';
       
       // Create a simple text representation based on file analysis
       const fileSizeKB = Math.round(file.size / 1024);
-      const fileName = file.name;
       
-      // Try to extract basic information from the PDF
-      let extractedText = '';
-      
-      // Check if the PDF contains readable text or is image-based
-      let isReadableText = false;
-      let textMatches = [];
-      
-      // Method 1: Try to find readable text patterns
-      const textDecoder = new TextDecoder('utf-8');
-      const pdfText = textDecoder.decode(uint8Array);
-      
-      // Look for actual readable text patterns
-      const readablePatterns = [
-        /\(([a-zA-Z0-9\s.,!?;:'"()-]{5,})\)/g, // Readable text in parentheses
-        /\[([a-zA-Z0-9\s.,!?;:'"()-]{5,})\]/g, // Readable text in brackets
-        /"([a-zA-Z0-9\s.,!?;:'"()-]{5,})"/g, // Readable text in quotes
-        /'([a-zA-Z0-9\s.,!?;:'"()-]{5,})'/g, // Readable text in single quotes
-      ];
-      
-      for (const pattern of readablePatterns) {
-        const matches = pdfText.match(pattern);
-        if (matches) {
-          const cleanMatches = matches
-            .map(match => match.replace(/[()\[\]"']/g, ''))
-            .filter(text => {
-              // Check if it's actually readable text
-              const hasLetters = /[a-zA-Z]/.test(text);
-              const hasReasonableLength = text.length >= 5;
-              const notJustNumbers = !/^[0-9\s.,]+$/.test(text);
-              const notEncoded = !/[^\x00-\x7F]/.test(text); // No non-ASCII characters
-              
-              return hasLetters && hasReasonableLength && notJustNumbers && notEncoded;
-            });
-          
-          if (cleanMatches.length > 0) {
-            textMatches = textMatches.concat(cleanMatches);
-            isReadableText = true;
+      if (isPDF) {
+        // PDF processing logic (existing code)
+        setProcessingStep('Converting PDF to images...');
+        setProgress(25);
+        
+        // Try to extract basic information from the PDF
+        let isReadableText = false;
+        let textMatches = [];
+        
+        // Method 1: Try to find readable text patterns
+        const textDecoder = new TextDecoder('utf-8');
+        const pdfText = textDecoder.decode(uint8Array);
+        
+        // Look for actual readable text patterns
+        const readablePatterns = [
+          /\(([a-zA-Z0-9\s.,!?;:'"()-]{5,})\)/g, // Readable text in parentheses
+          /\[([a-zA-Z0-9\s.,!?;:'"()-]{5,})\]/g, // Readable text in brackets
+          /"([a-zA-Z0-9\s.,!?;:'"()-]{5,})"/g, // Readable text in quotes
+          /'([a-zA-Z0-9\s.,!?;:'"()-]{5,})'/g, // Readable text in single quotes
+        ];
+        
+        for (const pattern of readablePatterns) {
+          const matches = pdfText.match(pattern);
+          if (matches) {
+            const cleanMatches = matches
+              .map(match => match.replace(/[()\[\]"']/g, ''))
+              .filter(text => {
+                // Check if it's actually readable text
+                const hasLetters = /[a-zA-Z]/.test(text);
+                const hasReasonableLength = text.length >= 5;
+                const notJustNumbers = !/^[0-9\s.,]+$/.test(text);
+                const notEncoded = !/[^\x00-\x7F]/.test(text); // No non-ASCII characters
+                
+                return hasLetters && hasReasonableLength && notJustNumbers && notEncoded;
+              });
+            
+            if (cleanMatches.length > 0) {
+              textMatches = textMatches.concat(cleanMatches);
+              isReadableText = true;
+            }
           }
+        }
+        
+        // Method 2: Check for PDF text operators with readable content
+        const textOperators = [
+          /\(([a-zA-Z0-9\s.,!?;:'"()-]{5,})\)\s*Tj/g,
+          /BT\s*([a-zA-Z0-9\s.,!?;:'"()-]{5,})\s*ET/g,
+        ];
+        
+        for (const pattern of textOperators) {
+          const matches = pdfText.match(pattern);
+          if (matches) {
+            const cleanMatches = matches
+              .map(match => match.replace(/[()]/g, '').replace(/BT\s*/, '').replace(/\s*ET/, '').replace(/\s*Tj/, ''))
+              .filter(text => {
+                const hasLetters = /[a-zA-Z]/.test(text);
+                const hasReasonableLength = text.length >= 5;
+                const notEncoded = !/[^\x00-\x7F]/.test(text);
+                
+                return hasLetters && hasReasonableLength && notEncoded;
+              });
+            
+            if (cleanMatches.length > 0) {
+              textMatches = textMatches.concat(cleanMatches);
+              isReadableText = true;
+            }
+          }
+        }
+        
+        if (textMatches.length > 0) {
+          extractedText = textMatches.join(' ');
+        }
+      } else if (isWord) {
+        // Word document processing
+        setProcessingStep('Extracting text from Word document...');
+        setProgress(50);
+        
+        try {
+          // Use mammoth to extract text from Word documents
+          console.log('Starting Word document text extraction for:', file.name);
+          const arrayBuffer = await file.arrayBuffer();
+          const result = await mammoth.extractRawText({ arrayBuffer });
+          
+          if (result.value && result.value.trim()) {
+            extractedText = result.value.trim();
+            console.log('✅ Successfully extracted text from Word document:', extractedText.length, 'characters');
+            console.log('First 200 characters:', extractedText.substring(0, 200));
+          } else {
+            throw new Error('No text content found in Word document');
+          }
+        } catch (error) {
+          console.error('❌ Error processing Word document:', error);
+          extractedText = `Word Document: ${file.name}\n\n` +
+                         `This Word document contains text that can be read aloud.\n` +
+                         `File size: ${Math.round(file.size / 1024)} KB\n` +
+                         `Document type: ${file.name.toLowerCase().endsWith('.docx') ? 'DOCX (Modern Word format)' : 'DOC (Legacy Word format)'}\n\n` +
+                         `Text extraction was attempted but encountered an issue: ${error.message}\n\n` +
+                         `To extract text from this Word document, you can:\n` +
+                         `1. Open the document in Microsoft Word or LibreOffice\n` +
+                         `2. Copy the text content\n` +
+                         `3. Paste it in the manual text input area below\n\n` +
+                         `Alternatively, you can convert the Word document to PDF format and upload it again.`;
         }
       }
       
-      // Method 2: Check for PDF text operators with readable content
-      const textOperators = [
-        /\(([a-zA-Z0-9\s.,!?;:'"()-]{5,})\)\s*Tj/g,
-        /BT\s*([a-zA-Z0-9\s.,!?;:'"()-]{5,})\s*ET/g,
-      ];
-      
-      for (const pattern of textOperators) {
-        const matches = pdfText.match(pattern);
-        if (matches) {
-          const cleanMatches = matches
-            .map(match => match.replace(/[()]/g, '').replace(/BT\s*/, '').replace(/\s*ET/, '').replace(/\s*Tj/, ''))
-            .filter(text => {
-              const hasLetters = /[a-zA-Z]/.test(text);
-              const hasReasonableLength = text.length >= 5;
-              const notEncoded = !/[^\x00-\x7F]/.test(text);
-              
-              return hasLetters && hasReasonableLength && notEncoded;
-            });
-          
-          if (cleanMatches.length > 0) {
-            textMatches = textMatches.concat(cleanMatches);
-            isReadableText = true;
-          }
-        }
-      }
-      
-      if (textMatches.length > 0) {
-        extractedText = textMatches.join(' ');
-      }
-      
-      // If no readable text found, this is likely an image-based PDF
-      if (!isReadableText || !extractedText || extractedText.length < 50) {
+      // If no readable text found, this is likely an image-based PDF (only for PDF files)
+      if (isPDF && (!isReadableText || !extractedText || extractedText.length < 50)) {
         // Check if this is an image-based PDF by looking for image indicators
         const hasImageIndicators = pdfText.includes('/XObject') || 
                                  pdfText.includes('/Image') || 
@@ -163,7 +210,7 @@ const UniversalPDFProcessor = ({ onPDFProcessed }) => {
 This PDF contains images or scanned content that cannot be directly read as text. 
 
 File Analysis:
-- Name: ${fileName}
+- Name: ${file.name}
 - Size: ${fileSizeKB} KB
 - Type: Image-based PDF (scanned document)
 - Content: Images, photos, or scanned text
@@ -185,7 +232,7 @@ The text-to-speech system is ready to read any text you provide!`;
           extractedText = `📄 PDF Analysis Complete
 
 File Information:
-- Name: ${fileName}
+- Name: ${file.name}
 - Size: ${fileSizeKB} KB
 - Format: PDF (${pdfHeader})
 
@@ -207,12 +254,12 @@ The text-to-speech system is ready to read any text you provide!`;
         }
       }
       
-      // If still no readable text found, create a structured response
-      if (!extractedText || extractedText.length < 50) {
+      // If still no readable text found, create a structured response (only for PDF files)
+      if (isPDF && (!extractedText || extractedText.length < 50)) {
         extractedText = `PDF Document Analysis
         
 File Information:
-- Name: ${fileName}
+- Name: ${file.name}
 - Size: ${fileSizeKB} KB
 - Format: PDF (${pdfHeader})
 
@@ -270,10 +317,15 @@ Note: The PDF processing library is working correctly, but this particular file 
 
   const handleFileSelect = (event) => {
     const file = event.target.files[0];
-    if (file && file.type === 'application/pdf') {
-      processPDFWithAlternativeMethod(file);
+    if (file && (file.type === 'application/pdf' || 
+                  file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+                  file.type === 'application/msword' ||
+                  file.name.toLowerCase().endsWith('.pdf') ||
+                  file.name.toLowerCase().endsWith('.docx') ||
+                  file.name.toLowerCase().endsWith('.doc'))) {
+      processDocument(file);
     } else {
-      alert('Please select a valid PDF file.');
+      alert('Please select a valid PDF or Word document (.pdf, .docx, .doc).');
     }
   };
 
@@ -295,10 +347,15 @@ Note: The PDF processing library is working correctly, but this particular file 
     const files = e.dataTransfer.files;
     if (files && files[0]) {
       const file = files[0];
-      if (file.type === 'application/pdf') {
-        processPDFWithAlternativeMethod(file);
+      if (file.type === 'application/pdf' || 
+          file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+          file.type === 'application/msword' ||
+          file.name.toLowerCase().endsWith('.pdf') ||
+          file.name.toLowerCase().endsWith('.docx') ||
+          file.name.toLowerCase().endsWith('.doc')) {
+        processDocument(file);
       } else {
-        alert('Please drop a valid PDF file.');
+        alert('Please drop a valid PDF or Word document (.pdf, .docx, .doc).');
       }
     }
   };
@@ -320,7 +377,7 @@ Note: The PDF processing library is working correctly, but this particular file 
         <input
           ref={fileInputRef}
           type="file"
-          accept=".pdf"
+          accept=".pdf,.docx,.doc"
           onChange={handleFileSelect}
           style={{ display: 'none' }}
         />
@@ -350,9 +407,9 @@ Note: The PDF processing library is working correctly, but this particular file 
                   <path d="M12 2v20"/>
                 </svg>
               </div>
-              <h3>Upload your PDF</h3>
-              <p>Drag and drop your PDF file here, or click to browse</p>
-              <p className="file-type">Universal PDF processor - works with all PDF types (max 50MB)</p>
+              <h3>Upload your Document</h3>
+              <p>Drag and drop your PDF or Word file here, or click to browse</p>
+              <p className="file-type">Universal document processor - supports PDF, DOCX, DOC files (max 50MB)</p>
               {!workerReady && (
                 <p className="worker-status">Initializing processor...</p>
               )}

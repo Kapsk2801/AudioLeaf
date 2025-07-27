@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <meta name="description" content="AudioLeaf - Transform your PDFs into spoken words with natural voices. Upload PDF and Word documents, extract text, and listen with high-quality text-to-speech.">
+  <meta name="keywords" content="PDF, text-to-speech, TTS, document conversion, audio, accessibility">
+  <meta name="author" content="AudioLeaf">
+  <meta name="theme-color" content="#10b981">
+  <title>AudioLeaf - Transform PDFs to Speech</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2" />
+  <link rel="icon" type="image/png" href="/favicon.png?v=2" />
+  <link rel="icon" type="image/x-icon" href="/favicon.ico?v=2" />
+  <link rel="apple-touch-icon" href="/favicon.svg?v=2" />
+  <link rel="shortcut icon" href="/favicon.svg?v=2" />
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/main.jsx"></script>
+  <script>
+    // Register service worker for offline support
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then(registration => {
+            console.log('SW registered: ', registration);
+          })
+          .catch(registrationError => {
+            console.log('SW registration failed: ', registrationError);
+          });
+      });
+    }
+    
+    // Force favicon reload
+    function reloadFavicon() {
+      const links = document.querySelectorAll('link[rel*="icon"]');
+      links.forEach(link => {
+        const href = link.href;
+        link.href = href.split('?')[0] + '?v=' + Date.now();
+      });
+    }
+    
+    // Reload favicon on page load
+    window.addEventListener('load', reloadFavicon);
+  </script>
+</body>
+</html> 
