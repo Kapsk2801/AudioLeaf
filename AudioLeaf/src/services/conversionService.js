@@ -199,7 +199,7 @@ startxref
   }
 
   // Convert document using real API (for production)
-  async convertDocumentReal(file, targetType, apiKey, onProgress) {
+  async convertDocumentReal(file, targetType, apiKey) {
     try {
       const formData = new FormData();
       formData.append('inputFile', file);
@@ -240,24 +240,20 @@ startxref
 
   // Main conversion method
   async convertDocument(file, targetType, onProgress, apiKey = null) {
-    try {
-      // Validate file
-      this.validateFile(file, targetType);
+    // Validate file
+    this.validateFile(file, targetType);
 
-      // Add timeout to prevent hanging
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Conversion timed out. Please try again.')), 30000); // 30 second timeout
-      });
+    // Add timeout to prevent hanging
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Conversion timed out. Please try again.')), 30000); // 30 second timeout
+    });
 
-      // Use mock service for demo, real service for production
-      const conversionPromise = this.useMockService || !apiKey 
-        ? this.convertDocumentMock(file, targetType, onProgress)
-        : this.convertDocumentReal(file, targetType, apiKey, onProgress);
+    // Use mock service for demo, real service for production
+    const conversionPromise = this.useMockService || !apiKey 
+      ? this.convertDocumentMock(file, targetType, onProgress)
+      : this.convertDocumentReal(file, targetType, apiKey, onProgress);
 
-      return await Promise.race([conversionPromise, timeoutPromise]);
-    } catch (error) {
-      throw error;
-    }
+    return await Promise.race([conversionPromise, timeoutPromise]);
   }
 
   // Clean up URLs to prevent memory leaks

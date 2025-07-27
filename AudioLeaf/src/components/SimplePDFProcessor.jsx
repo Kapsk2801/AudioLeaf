@@ -49,42 +49,42 @@ const SimplePDFProcessor = ({ onPDFProcessed }) => {
     };
   }, []);
 
-  const extractTextFromImages = async (images) => {
-    const extractedTexts = [];
-    
-    if (!tesseractWorkerRef.current) {
-      console.warn('Tesseract not available, providing fallback message');
-      for (let i = 0; i < images.length; i++) {
-        extractedTexts.push('OCR processing not available. This appears to be an image-based PDF. Please try a text-based PDF or contact support.');
-      }
-      return extractedTexts;
-    }
-    
-    for (let i = 0; i < images.length; i++) {
-      setProcessingStep(`Processing image ${i + 1} of ${images.length} with OCR...`);
-      setProgress(0);
-      
-      try {
-        const ocrPromise = tesseractWorkerRef.current.recognize(images[i]);
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('OCR processing timeout')), 120000)
-        );
-        
-        const result = await Promise.race([ocrPromise, timeoutPromise]);
-        extractedTexts.push(result.data.text);
-        console.log(`OCR completed for image ${i + 1}:`, result.data.text.length, 'characters');
-      } catch (error) {
-        console.error(`OCR failed for image ${i + 1}:`, error);
-        if (error.message.includes('OCR processing timeout')) {
-          extractedTexts.push('OCR processing timed out for this page.');
-        } else {
-          extractedTexts.push('OCR processing failed for this page.');
-        }
-      }
-    }
-    
-    return extractedTexts;
-  };
+    // const extractTextFromImages = async (images) => {
+  //   const extractedTexts = [];
+  //   
+  //   if (!tesseractWorkerRef.current) {
+  //     console.warn('Tesseract not available, providing fallback message');
+  //     for (let i = 0; i < images.length; i++) {
+  //       extractedTexts.push('OCR processing not available. This appears to be an image-based PDF. Please try a text-based PDF or contact support.');
+  //     }
+  //     return extractedTexts;
+  //   }
+  //   
+  //   for (let i = 0; i < images.length; i++) {
+  //     setProcessingStep(`Processing image ${i + 1} of ${images.length} with OCR...`);
+  //     setProgress(0);
+  //     
+  //     try {
+  //       const ocrPromise = tesseractWorkerRef.current.recognize(images[i]);
+  //       const timeoutPromise = new Promise((_, reject) => 
+  //         setTimeout(() => reject(new Error('OCR processing timeout')), 120000)
+  //       );
+  //       
+  //       const result = await Promise.race([ocrPromise, timeoutPromise]);
+  //       extractedTexts.push(result.data.text);
+  //       console.log(`OCR completed for image ${i + 1}:`, result.data.text.length, 'characters');
+  //     } catch (error) {
+  //       console.error(`OCR failed for image ${i + 1}:`, error);
+  //       if (error.message.includes('OCR processing timeout')) {
+  //         extractedTexts.push('OCR processing timed out for this page.');
+  //       } else {
+  //         extractedTexts.push('OCR processing failed for this page.');
+  //       }
+  //     }
+  //   }
+  //   
+  //   return extractedTexts;
+  // };
 
   const processPDFAsImages = async (file) => {
     try {
@@ -95,8 +95,8 @@ const SimplePDFProcessor = ({ onPDFProcessed }) => {
       console.log('Processing PDF as images:', file.name, 'Size:', file.size);
       
       // Create a canvas to render PDF pages
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
+      // const canvas = document.createElement('canvas'); // Unused variable
+      // const ctx = canvas.getContext('2d'); // Unused variable
       
       // For now, we'll create a simple text-based approach
       // This is a fallback when PDF.js fails

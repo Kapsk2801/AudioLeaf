@@ -96,7 +96,6 @@ const UniversalPDFProcessor = ({ onPDFProcessed }) => {
         setProgress(25);
         
         // Try to extract basic information from the PDF
-        let isReadableText = false;
         let textMatches = [];
         
         // Method 1: Try to find readable text patterns
@@ -106,7 +105,6 @@ const UniversalPDFProcessor = ({ onPDFProcessed }) => {
         // Look for actual readable text patterns
         const readablePatterns = [
           /\(([a-zA-Z0-9\s.,!?;:'"()-]{5,})\)/g, // Readable text in parentheses
-          /\[([a-zA-Z0-9\s.,!?;:'"()-]{5,})\]/g, // Readable text in brackets
           /"([a-zA-Z0-9\s.,!?;:'"()-]{5,})"/g, // Readable text in quotes
           /'([a-zA-Z0-9\s.,!?;:'"()-]{5,})'/g, // Readable text in single quotes
         ];
@@ -115,20 +113,20 @@ const UniversalPDFProcessor = ({ onPDFProcessed }) => {
           const matches = pdfText.match(pattern);
           if (matches) {
             const cleanMatches = matches
-              .map(match => match.replace(/[()\[\]"']/g, ''))
+              .map(match => match.replace(/[()"']/g, ''))
               .filter(text => {
                 // Check if it's actually readable text
                 const hasLetters = /[a-zA-Z]/.test(text);
                 const hasReasonableLength = text.length >= 5;
                 const notJustNumbers = !/^[0-9\s.,]+$/.test(text);
-                const notEncoded = !/[^\x00-\x7F]/.test(text); // No non-ASCII characters
+                // eslint-disable-next-line no-control-regex
+                const notEncoded = !/[^\x00-\x7F]/u.test(text); // No non-ASCII characters
                 
                 return hasLetters && hasReasonableLength && notJustNumbers && notEncoded;
               });
             
             if (cleanMatches.length > 0) {
               textMatches = textMatches.concat(cleanMatches);
-              isReadableText = true;
             }
           }
         }
@@ -147,14 +145,14 @@ const UniversalPDFProcessor = ({ onPDFProcessed }) => {
               .filter(text => {
                 const hasLetters = /[a-zA-Z]/.test(text);
                 const hasReasonableLength = text.length >= 5;
-                const notEncoded = !/[^\x00-\x7F]/.test(text);
+                // eslint-disable-next-line no-control-regex
+                const notEncoded = !/[^\x00-\x7F]/u.test(text);
                 
                 return hasLetters && hasReasonableLength && notEncoded;
               });
             
             if (cleanMatches.length > 0) {
               textMatches = textMatches.concat(cleanMatches);
-              isReadableText = true;
             }
           }
         }
@@ -196,8 +194,10 @@ const UniversalPDFProcessor = ({ onPDFProcessed }) => {
       }
       
       // If no readable text found, this is likely an image-based PDF (only for PDF files)
-      if (isPDF && (!isReadableText || !extractedText || extractedText.length < 50)) {
+      if (isPDF && (!extractedText || extractedText.length < 50)) {
         // Check if this is an image-based PDF by looking for image indicators
+        const textDecoder = new TextDecoder('utf-8');
+        const pdfText = textDecoder.decode(uint8Array);
         const hasImageIndicators = pdfText.includes('/XObject') || 
                                  pdfText.includes('/Image') || 
                                  pdfText.includes('/Subtype') ||
@@ -229,6 +229,7 @@ To use this PDF with AudioLeaf:
 
 The text-to-speech system is ready to read any text you provide!`;
         } else {
+          const pdfHeader = String.fromCharCode(...uint8Array.slice(0, 4));
           extractedText = `📄 PDF Analysis Complete
 
 File Information:
@@ -256,6 +257,7 @@ The text-to-speech system is ready to read any text you provide!`;
       
       // If still no readable text found, create a structured response (only for PDF files)
       if (isPDF && (!extractedText || extractedText.length < 50)) {
+        const pdfHeader = String.fromCharCode(...uint8Array.slice(0, 4));
         extractedText = `PDF Document Analysis
         
 File Information:
