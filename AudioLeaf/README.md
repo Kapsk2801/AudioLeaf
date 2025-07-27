@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # AudioLeaf 🌿
 
 **Transform your PDFs into spoken words with natural voices**
@@ -212,3 +213,32 @@ If you encounter any issues or have questions:
 ---
 
 **Made with ❤️ for accessible reading**
+=======
+# AudioLeaf
+
+AudioLeaf is a modern web application that lets you upload PDF files and listen to them using your browser’s built-in Text-to-Speech (TTS) engine.
+
+---
+
+## Features
+
+- Upload PDF files  
+- Extract and display text  
+- Listen using TTS (Web Speech API)  
+- Playback controls: Play, Pause, Stop  
+- Page navigation  
+- Voice and speed selection  
+- Fully responsive design  
+- Built with accessibility in mind  
+
+---
+
+## Tech Stack
+
+- **React 19 + Vite**  
+- **PDF.js** for text extraction  
+- **Web Speech API** for TTS  
+- **Tailwind CSS** (optional)  
+
+---
+>>>>>>> 26173b936fb891c2253eb1e89e47ed8ddcff087d
